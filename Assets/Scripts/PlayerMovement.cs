@@ -42,11 +42,12 @@ public class PlayerMovement : MonoBehaviour
 
     //Input
     float x, y;
-    bool jumping, sprinting, crouching;
+    bool jumping, sprinting, crouching, shoot;
 
     //Sliding
     private Vector3 normalVector = Vector3.up;
     private Vector3 wallNormalVector;
+    bool startSlide = false;
 
     void Awake()
     {
@@ -80,6 +81,7 @@ public class PlayerMovement : MonoBehaviour
         x = Input.GetAxisRaw("Horizontal");
         y = Input.GetAxisRaw("Vertical");
         jumping = Input.GetButton("Jump");
+        shoot = Input.GetButton("Shoot");
         crouching = Input.GetKey(KeyCode.LeftControl);
 
         if (crouching)
@@ -95,10 +97,15 @@ public class PlayerMovement : MonoBehaviour
         }
 
         //Crouching
-        if (Input.GetKeyDown(KeyCode.LeftControl)) 
+        if (Input.GetKeyDown(KeyCode.LeftControl))
             StartCrouch();
         if (Input.GetKeyUp(KeyCode.LeftControl))
             StopCrouch();
+    }
+
+    private void BlowBack()
+    {
+
     }
 
     private void StartCrouch()
@@ -142,7 +149,7 @@ public class PlayerMovement : MonoBehaviour
         if (crouching && grounded && readyToJump)
         {
             rb.AddForce(Vector3.down * Time.deltaTime * 3000);
-            return;
+            //return;
         }
 
         //If speed is larger than maxspeed, cancel out the input so you don't go over max speed
@@ -162,11 +169,19 @@ public class PlayerMovement : MonoBehaviour
         }
 
         // Movement while sliding
-        if (grounded && crouching) multiplierV = 0f;
+        if (grounded && crouching) multiplierV = 1f;
 
         //Apply forces to move player
         rb.AddForce(orientation.transform.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
         rb.AddForce(orientation.transform.right * x * moveSpeed * Time.deltaTime * multiplier);
+
+        if (startSlide)
+        {
+            Debug.Log(startSlide);
+            rb.AddForce(orientation.transform.forward * moveSpeed * Time.deltaTime * 20);
+            startSlide = false;
+            
+        }
     }
 
     private void Jump()
@@ -288,6 +303,10 @@ public class PlayerMovement : MonoBehaviour
             //FLOOR
             if (IsFloor(normal))
             {
+                if (crouching && !grounded)
+                {
+                    startSlide = true;
+                }
                 grounded = true;
                 cancellingGrounded = false;
                 normalVector = normal;
