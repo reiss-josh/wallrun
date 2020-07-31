@@ -1042,7 +1042,7 @@ namespace Sabresaurus.SabreCSG
                 if (PrefabUtility.GetPrefabParent(Selection.gameObjects[i]) == null
 #endif
 #if !UNITY_2018_3
-					&& PrefabUtility.GetPrefabObject(Selection.gameObjects[i].transform) != null)
+					&& PrefabUtility.GetPrefabInstanceHandle(Selection.gameObjects[i].transform) != null)
 #else
 					&& PrefabUtility.GetPrefabInstanceHandle(Selection.gameObjects[i].transform) != null)
 #endif
