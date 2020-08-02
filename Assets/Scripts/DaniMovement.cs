@@ -9,7 +9,6 @@ public class DaniMovement : MonoBehaviour
     //Assingables
     public Transform playerCam;
     public Transform orientation;
-    public Transform gunHand;
 
     //Other
     private Rigidbody rb;
@@ -42,12 +41,11 @@ public class DaniMovement : MonoBehaviour
 
     //Input
     float x, y;
-    bool jumping, sprinting, crouching, shoot;
+    bool jumping, sprinting, crouching;
 
     //Sliding
     private Vector3 normalVector = Vector3.up;
     private Vector3 wallNormalVector;
-    bool startSlide = false;
 
     void Awake()
     {
@@ -81,31 +79,13 @@ public class DaniMovement : MonoBehaviour
         x = Input.GetAxisRaw("Horizontal");
         y = Input.GetAxisRaw("Vertical");
         jumping = Input.GetButton("Jump");
-        shoot = Input.GetButton("Shoot");
         crouching = Input.GetKey(KeyCode.LeftControl);
-
-        if (crouching)
-        {
-            Quaternion rotation = playerCam.rotation;
-            rotation *= Quaternion.Euler(0, 0, 45);
-            gunHand.rotation = Quaternion.Slerp(gunHand.rotation, rotation, Time.deltaTime * 10f);
-        }
-        else
-        {
-            Quaternion rotation = playerCam.rotation;
-            gunHand.rotation = Quaternion.Slerp(gunHand.rotation, rotation, Time.deltaTime * 10f);
-        }
 
         //Crouching
         if (Input.GetKeyDown(KeyCode.LeftControl))
             StartCrouch();
         if (Input.GetKeyUp(KeyCode.LeftControl))
             StopCrouch();
-    }
-
-    private void BlowBack()
-    {
-
     }
 
     private void StartCrouch()
@@ -149,7 +129,7 @@ public class DaniMovement : MonoBehaviour
         if (crouching && grounded && readyToJump)
         {
             rb.AddForce(Vector3.down * Time.deltaTime * 3000);
-            //return;
+            return;
         }
 
         //If speed is larger than maxspeed, cancel out the input so you don't go over max speed
@@ -169,19 +149,11 @@ public class DaniMovement : MonoBehaviour
         }
 
         // Movement while sliding
-        if (grounded && crouching) multiplierV = 1f;
+        if (grounded && crouching) multiplierV = 0f;
 
         //Apply forces to move player
         rb.AddForce(orientation.transform.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
         rb.AddForce(orientation.transform.right * x * moveSpeed * Time.deltaTime * multiplier);
-
-        if (startSlide)
-        {
-            Debug.Log(startSlide);
-            rb.AddForce(orientation.transform.forward * moveSpeed * Time.deltaTime * 20);
-            startSlide = false;
-
-        }
     }
 
     private void Jump()
@@ -303,10 +275,6 @@ public class DaniMovement : MonoBehaviour
             //FLOOR
             if (IsFloor(normal))
             {
-                if (crouching && !grounded)
-                {
-                    startSlide = true;
-                }
                 grounded = true;
                 cancellingGrounded = false;
                 normalVector = normal;
