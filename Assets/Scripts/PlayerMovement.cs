@@ -63,6 +63,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
+        GroundCheck();
         Movement();
     }
 
@@ -73,6 +74,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     //should probably make this its own class
+    //gets input
     private void GetInput()
     {
         xInput = Input.GetAxis("Horizontal");
@@ -86,6 +88,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     //modeled off look code from Dani
+    //used to move camera and update Orientation
     private float xRotation, yRotation;
     private void Look()
     {
@@ -113,10 +116,10 @@ public class PlayerMovement : MonoBehaviour
         return new Vector2(xMag, yMag);
     }
 
+    //all the Cool Movement Code happens here
     private void Movement()
     {
-        //Debug.Log(isGrounded);
-        //Extra gravity
+        //Extra gravity -- might be uneccesary
         rb.AddForce(Vector3.down * Time.deltaTime * 10);
         Vector2 xyVelocity = FindVelRelativeToOrientation();
 
@@ -126,21 +129,22 @@ public class PlayerMovement : MonoBehaviour
         if ((yInput > 0 && xyVelocity.y > walkSpeedCap) ||
             (yInput < 0 && xyVelocity.y < -walkSpeedCap)) yInput = 0;
 
-        if (jumpTimer > 0) jumpTimer -= Time.deltaTime;
-        else if (jumpTimer == 0) canJump = true;
-        else { jumpTimer = 0; canJump = true; }
-        if (canJump && jumpInput && isGrounded) HandleJumping();
+        //handle jumping
+        HandleJumping();
 
         //might want to replace slideTimer with something else
         //maybe only trigger it if you're jumping or sprinting for a minimum amnt of time?
+        //handles sliding
         if (crouchInput && slideTimer <= 0 && isGrounded) HandleSliding(xyVelocity);
 
+        //handles everything crouch-related other than sliding
         HandleCrouching();
         float multiplier = 1f;
         rb.AddForce(orientation.transform.forward * yInput * moveSpeed * Time.deltaTime * multiplier);
         rb.AddForce(orientation.transform.right * xInput * moveSpeed * Time.deltaTime * multiplier);
     }
 
+    //updates collider, head position, and hand rotation for crouching
     private void HandleCrouching()
     {
         if (crouchInput && isGrounded) slideTimer = 1.0f;
@@ -152,27 +156,38 @@ public class PlayerMovement : MonoBehaviour
         GunRotate();
     }
 
+    //applies the necessary forces for a slide
     private void HandleSliding(Vector2 xyVelocity)
     {
         rb.AddForce(orientation.transform.forward * xyVelocity.y * slideForce);
         rb.AddForce(orientation.transform.right * xyVelocity.x * slideForce);
     }
 
+    //handles jumping
     private Vector3 normalVector = Vector3.up;
     private void HandleJumping()
     {
-        jumpTimer = jumpTime;
-        canJump = false;
-        //Add jump forces
-        rb.AddForce(Vector2.up * jumpForce * 1.5f);
-        rb.AddForce(normalVector * jumpForce * 0.5f);
+        //update jump variables to see if a jump is acceptable
+        if (jumpTimer > 0) jumpTimer -= Time.deltaTime;
+        else if (jumpTimer == 0) canJump = true;
+        else { jumpTimer = 0; canJump = true; }
 
-        //If jumping while falling, reset y velocity.
-        Vector3 vel = rb.velocity;
-        if (rb.velocity.y < 0.5f)
-            rb.velocity = new Vector3(vel.x, 0, vel.z);
-        else if (rb.velocity.y > 0)
-            rb.velocity = new Vector3(vel.x, vel.y / 2, vel.z);
+        //actually perform a jump
+        if (canJump && jumpInput && isGrounded)
+        {
+            jumpTimer = jumpTime;
+            canJump = false;
+            //Add jump forces
+            rb.AddForce(Vector2.up * jumpForce * 1.5f);
+            rb.AddForce(normalVector * jumpForce * 0.5f);
+
+            //If jumping while falling, reset y velocity.
+            Vector3 vel = rb.velocity;
+            if (rb.velocity.y < 0.5f)
+                rb.velocity = new Vector3(vel.x, 0, vel.z);
+            else if (rb.velocity.y > 0)
+                rb.velocity = new Vector3(vel.x, vel.y / 2, vel.z);
+        }
     }
 
 
@@ -183,7 +198,7 @@ public class PlayerMovement : MonoBehaviour
     {
         Quaternion rotation = playerCam.rotation;
         Vector3 Angle = (isCrouching ?
-                            new Vector3(0,0,45) : default(Vector3));
+                         new Vector3(0,0,45) : default(Vector3));
         if (Angle != default(Vector3)) rotation *= Quaternion.Euler(Angle);
         gunHand.rotation = Quaternion.Slerp(gunHand.rotation, rotation, Time.deltaTime * 10f);
     }
@@ -191,9 +206,9 @@ public class PlayerMovement : MonoBehaviour
     private void CrouchCollider()
     {
         Vector3 crouchDest = (isCrouching ?
-                                new Vector3(0, -0.5f, 0) : Vector3.zero);
+                              new Vector3(0, -0.5f, 0) : Vector3.zero);
         float newHeight = (isCrouching ?
-                                1f : 2f);
+                              1f : 2f);
         playerCollider.height = Mathf.Lerp(playerCollider.height, newHeight, Time.deltaTime * 10f);
         playerCollider.center = Vector3.Lerp(playerCollider.center, crouchDest, Time.deltaTime * 10f);
     }
@@ -208,5 +223,15 @@ public class PlayerMovement : MonoBehaviour
     private bool HeadOccluded()
     {
         return false;
+    }
+
+    Vector3 groundDir = new Vector3(0, -1);
+    RaycastHit groundHit;
+    void GroundCheck()
+    {
+        float distance = 1.6f; //should probably retrieve this somehow rather than just setting it
+        //Debug.DrawRay(transform.position, groundDir*distance, Color.red, 0.0f);
+        if (Physics.Raycast(transform.position, groundDir, out groundHit, distance)) isGrounded = true;
+        else isGrounded = false;
     }
 }
